@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunal Singh Voice Bot - Demo</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background: rgba(100, 200, 255, 0.3);
+            margin-left: auto;
+            text-align: right;
+        }
+        .bot-message {
+            background: rgba(255, 255, 255, 0.2);
+            margin-right: auto;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+        }
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        button {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .voice-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            opacity: 0.8;
+        }
+        .example-questions {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        .example-questions h3 {
+            margin-top: 0;
+            color: #FFD700;
+        }
+        .example-questions ul {
+            list-style: none;
+            padding: 0;
+        }
+        .example-questions li {
+            padding: 8px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+            padding-left: 10px;
+        }
+        .example-questions li:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(10px);
+        }
+        .error {
+            color: #ff6b6b;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .loading {
+            text-align: center;
+            margin: 10px 0;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Kunal Singh Voice Bot</h1>
+        <p class="subtitle">Chat with Kunal about GenAI, prompt engineering, and his journey</p>
+        
+        <div class="status" id="status">Connecting to voice bot...</div>
+        
+        <div class="chat-container" id="chatContainer">
+            <!-- Messages will appear here -->
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Ask me about my life story, superpowers, or anything else..." />
+            <button onclick="sendMessage()" id="sendBtn">Send</button>
+        </div>
+        
+        <div class="voice-controls">
+            <button onclick="startRecording()" id="recordBtn">🎤 Record</button>
+            <button onclick="stopRecording()" id="stopBtn" disabled>⏹️ Stop</button>
+            <button onclick="getFirstMessage()" id="firstMsgBtn">👋 Get First Message</button>
+        </div>
+        
+        <div class="example-questions">
+            <h3>💡 Try asking me:</h3>
+            <ul>
+                <li onclick="askQuestion('What should I know about your life story in a few sentences?')">• What should I know about your life story?</li>
+                <li onclick="askQuestion('What is your #1 superpower?')">• What is your #1 superpower?</li>
+                <li onclick="askQuestion('What are the top 3 areas you would like to grow in?')">• What are your top 3 growth areas?</li>
+                <li onclick="askQuestion('What misconception do your coworkers have about you?')">• What misconceptions do people have about you?</li>
+                <li onclick="askQuestion('How do you push your boundaries and limits?')">• How do you push your boundaries?</li>
+                <li onclick="askQuestion('Tell me about your GenAI projects like PromptHub')">• Tell me about your GenAI projects</li>
+                <li onclick="askQuestion('What is your prompt engineering philosophy?')">• What is your prompt engineering philosophy?</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - Update this to your deployed backend URL
+        const API_BASE_URL = 'http://localhost:3000';
+        
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        
+        // DOM elements
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const firstMsgBtn = document.getElementById('firstMsgBtn');
+        const status = document.getElementById('status');
+        
+        // Initialize the app
+        async function init() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    status.textContent = `✅ Connected to ${data.persona} - Ready to chat!`;
+                    status.style.color = '#90EE90';
+                } else {
+                    throw new Error('Failed to connect');
+                }
+            } catch (error) {
+                status.textContent = '❌ Failed to connect to voice bot backend';
+                status.style.color = '#ff6b6b';
+                console.error('Connection error:', error);
+            }
+        }
+        
+        // Add message to chat
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = content;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Add loading indicator
+        function addLoading() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            loadingDiv.id = 'loading';
+            loadingDiv.textContent = '🤔 Kunal is thinking...';
+            chatContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Remove loading indicator
+        function removeLoading() {
+            const loading = document.getElementById('loading');
+            if (loading) loading.remove();
+        }
+        
+        // Send text message
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            addMessage(message, true);
+            messageInput.value = '';
+            sendBtn.disabled = true;
+            addLoading();
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ input: message })
+                });
+                
+                const data = await response.json();
+                removeLoading();
+                
+                if (data.response) {
+                    addMessage(data.response);
+                    // Optional: Convert response to speech
+                    await playResponseAudio(data.response);
+                } else {
+                    addMessage('Sorry, I encountered an error. Please try again.');
+                }
+            } catch (error) {
+                removeLoading();
+                addMessage('Connection error. Please check if the backend is running.');
+                console.error('Error:', error);
+            }
+            
+            sendBtn.disabled = false;
+        }
+        
+        // Play response as audio
+        async function playResponseAudio(text) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/tts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        text: text, 
+                        voice: 'alloy' 
+                    })
+                });
+                
+                if (response.ok) {
+                    const audioBlob = await response.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                }
+            } catch (error) {
+                console.error('TTS Error:', error);
+            }
+        }
+        
+        // Get first message
+        async function getFirstMessage() {
+            addLoading();
+            firstMsgBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: 'getFirstMessage' })
+                });
+                
+                const data = await response.json();
+                removeLoading();
+                
+                if (data.response) {
+                    addMessage(data.response);
+                    await playResponseAudio(data.response);
+                }
+            } catch (error) {
+                removeLoading();
+                addMessage('Error getting first message.');
+                console.error('Error:', error);
+            }
+            
+            firstMsgBtn.disabled = false;
+        }
+        
+        // Ask a predefined question
+        function askQuestion(question) {
+            messageInput.value = question;
+            sendMessage();
+        }
+        
+        // Start recording
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await sendVoiceMessage(audioBlob);
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                status.textContent = '🎤 Recording... Click stop when done';
+            } catch (error) {
+                console.error('Recording error:', error);
+                status.textContent = 'Microphone access denied or not available';
+            }
+        }
+        
+        // Stop recording
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+                status.textContent = '🔄 Processing your voice message...';
+            }
+        }
+        
+        // Send voice message
+        async function sendVoiceMessage(audioBlob) {
+            addLoading();
+            
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.wav');
+                formData.append('returnAudio', 'true');
+                formData.append('voice', 'nova');
+                
+                const response = await fetch(`${API_BASE_URL}/voice`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                removeLoading();
+                
+                if (data.transcript) {
+                    addMessage(data.transcript, true);
+                }
+                
+                if (data.response) {
+                    addMessage(data.response);
+                    
+                    // Play audio response if available
+                    if (data.audioResponse) {
+                        const audioBlob = new Blob([
+                            new Uint8Array(atob(data.audioResponse).split('').map(c => c.charCodeAt(0)))
+                        ], { type: 'audio/mpeg' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                    }
+                }
+                
+                status.textContent = '✅ Connected - Ready to chat!';
+            } catch (error) {
+                removeLoading();
+                addMessage('Error processing voice message.');
+                console.error('Voice error:', error);
+                status.textContent = '❌ Voice processing failed';
+            }
+        }
+        
+        // Enter key to send message
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
