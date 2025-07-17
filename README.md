@@ -51,7 +51,7 @@ The server will start at `http://localhost:3000`
 1. **Clone the Repository**:
    ```bash
    git clone <repository-url>
-   cd voice-bot-backend
+   cd 100x-voicebot
    ```
 
 2. **Install Dependencies**:

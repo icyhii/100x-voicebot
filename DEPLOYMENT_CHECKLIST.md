@@ -125,6 +125,8 @@ After deployment, you should see:
 3. **Environment Variables Missing**: Double-check in Vercel dashboard
 4. **CORS Errors**: Update `CORS_ORIGIN` environment variable
 5. **API Key Issues**: Verify OpenAI API key has sufficient quota
+6. **"No Output Directory" Error**: Fixed - using serverless function deployment
+7. **"Functions/builds conflict"**: Fixed - using proper builds configuration
 
 ## 🎉 Ready for Deployment!
 
