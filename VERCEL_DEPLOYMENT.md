@@ -94,12 +94,11 @@ Replace `your-app-name.vercel.app` with your actual Vercel domain:
 ```json
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 30
     }
-  ],
+  },
   "routes": [
     {
       "src": "/(.*)",
@@ -108,11 +107,6 @@ Replace `your-app-name.vercel.app` with your actual Vercel domain:
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "api/index.ts": {
-      "maxDuration": 30
-    }
   }
 }
 ```
