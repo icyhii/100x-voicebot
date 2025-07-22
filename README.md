@@ -8,8 +8,12 @@ A conversational AI backend that embodies Kunal Singh's persona using OpenAI's G
 - 🎤 **Speech-to-Text**: Convert voice input to text using OpenAI Whisper
 - 🔊 **Text-to-Speech**: Convert AI responses back to speech with multiple voice options
 - 💬 **Conversation Memory**: Maintains context throughout the conversation
-- 🛡️ **Security**: Rate limiting, CORS protection, and input validation
-- 📝 **REST API**: Clean RESTful endpoints for easy integration
+- 🚀 **Smart Processing Pipeline**: Automatic parallel processing (3-6s) with traditional fallback (8-15s)
+- 🎯 **Zero-Latency Optimizations**: Enhanced voice quality with text optimization and professional Nova voice
+- 💡 **Intelligent Fallback**: Automatic reliability with seamless pipeline switching
+- 🌊 **Dual Processing Modes**: Optimized parallel processing with reliable traditional backup
+- 🛡️ **Production Ready**: Rate limiting, CORS protection, comprehensive error handling
+- 📝 **REST API**: Clean, simplified endpoints with smart processing selection
 
 ## Quick Start
 
@@ -72,8 +76,31 @@ The server will start at `http://localhost:3000`
 
 ## Usage Guidelines
 
-- Send a POST request to `/chat` with a JSON body containing the user's message to interact via text.
-- Send a POST request to `/voice` with audio data to interact via voice.
+### Smart Voice Processing (Recommended):
+- Send a POST request to `/voice` with audio data for **automatic optimization**
+- **Default behavior**: Attempts parallel processing (3-6s), falls back to traditional (8-15s) if needed
+- **Force traditional**: Include `"mode": "traditional"` in request body for guaranteed traditional processing
+
+### Text Chat:
+- Send a POST request to `/chat` with a JSON body containing the user's message
+- Use `POST /chat/stream` for real-time streaming chat responses with Server-Sent Events
+
+### Explicit Traditional Processing:
+- Use `POST /voice/traditional` for guaranteed traditional processing (8-15s)
+- **Use case**: When you need maximum reliability over speed
+
+### Voice Configuration:
+- Get available options with `GET /voice/options`
+- Enhanced configuration includes processing modes, voice options, and optimizations
+
+### Performance Modes:
+- **Parallel Processing** (Default): Real-time streaming pipeline (~3-6s)
+  - Chunked audio processing, streaming STT, incremental chat, parallel TTS
+  - Automatic fallback to traditional on any error
+- **Traditional Processing** (Fallback/Explicit): Sequential pipeline (~8-15s)  
+  - STT → Chat → TTS in sequence, guaranteed reliability
+
+See `STREAMLINED_ARCHITECTURE.md` for detailed implementation guide and `VOICE_QUALITY_IMPROVEMENTS.md` for optimization details.
 
 ## Contributing
 

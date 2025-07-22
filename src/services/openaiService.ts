@@ -97,7 +97,23 @@ If user asks about private account details or job prospects, direct them to cont
 
 Mirror user tone: technical → use precise jargon; non‑technical → simplify and analogize.
 
-If confused, ask clarifying questions before answering.`;
+If confused, ask clarifying questions before answering.
+
+VOICE OUTPUT OPTIMIZATION:
+
+When generating responses for voice synthesis:
+- Use natural speech patterns with pauses indicated by ... for better audio flow
+- Include conversational markers: "you know," "actually," "so" to sound more human
+- Add natural confirmations: "Does that make sense?" "Following me?" "You with me?"
+- Keep responses under 3 sentences unless technical detail is valuable
+- Use "and" instead of "&", spell out abbreviations clearly for pronunciation
+- Break up complex technical terms with brief explanations
+- Add casual transitions: "So here's the thing..." "Actually..." "You know what's interesting?"
+
+Example voice-optimized response:
+"So... my superpower is definitely systems thinking, you know? I can connect dots across different technical domains... take these messy, complex ideas and turn them into well-scoped, testable solutions. Does that track with what you're looking for?"
+
+Keep all responses conversational, engaging, and optimized for natural speech delivery.`;
     }
 
     public getFirstMessage(): string {
@@ -152,6 +168,169 @@ If confused, ask clarifying questions before answering.`;
                 throw new Error(`OpenAI Chat API Error: ${error.message}`);
             }
             throw new Error('Failed to fetch response from OpenAI Chat Completions API');
+        }
+    }
+
+    public async *fetchStreamingResponse(input: string, isFirstMessage: boolean = false): AsyncGenerator<string, void, unknown> {
+        try {
+            console.log('🤖 Streaming request to OpenAI Chat Completions API...');
+
+            // Add user input to conversation history
+            this.conversationHistory.push({ role: 'user', content: input });
+
+            const messages = [
+                { role: 'system' as const, content: this.systemPrompt },
+                ...this.conversationHistory
+            ];
+
+            const stream = await this.openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: messages,
+                max_tokens: 500,
+                temperature: 0.7,
+                presence_penalty: 0.1,
+                frequency_penalty: 0.1,
+                stream: true
+            });
+
+            let fullResponse = '';
+
+            for await (const chunk of stream) {
+                const content = chunk.choices[0]?.delta?.content || '';
+                if (content) {
+                    fullResponse += content;
+                    yield content;
+                }
+            }
+
+            if (!fullResponse) {
+                throw new Error('No response received from OpenAI');
+            }
+
+            // Add complete assistant response to conversation history
+            this.conversationHistory.push({ role: 'assistant', content: fullResponse });
+
+            // Keep conversation history manageable (last 10 exchanges)
+            if (this.conversationHistory.length > 20) {
+                this.conversationHistory = this.conversationHistory.slice(-20);
+            }
+
+            console.log('✅ Completed streaming response from OpenAI Chat Completions API');
+        } catch (error) {
+            console.error('❌ Error streaming response from OpenAI Chat Completions API:', error);
+            if (error instanceof Error) {
+                throw new Error(`OpenAI Chat API Streaming Error: ${error.message}`);
+            }
+            throw new Error('Failed to stream response from OpenAI Chat Completions API');
+        }
+    }
+
+    public async *fetchIncrementalStreamingResponse(partialInputs: AsyncGenerator<string>): AsyncGenerator<{type: 'partial' | 'complete', content: string, inputUsed: string}, void, unknown> {
+        try {
+            console.log('🤖 Starting incremental streaming chat processing...');
+
+            let accumulatedInput = '';
+            let lastProcessedLength = 0;
+            const minInputLength = 10; // Minimum characters before processing
+            let completeChatStarted = false;
+
+            for await (const partialInput of partialInputs) {
+                accumulatedInput += ' ' + partialInput.trim();
+                
+                // Process partial inputs when we have enough content
+                if (accumulatedInput.length >= minInputLength && 
+                    accumulatedInput.length - lastProcessedLength >= 5) {
+                    
+                    console.log(`🔄 Processing partial input: "${accumulatedInput.substring(0, 50)}..."`);
+                    
+                    // Create a partial context for early processing
+                    const partialMessages = [
+                        { role: 'system' as const, content: this.systemPrompt + "\n\nNote: This is partial input, provide a brief initial response." },
+                        { role: 'user' as const, content: `Partial input: ${accumulatedInput}` }
+                    ];
+
+                    try {
+                        const partialStream = await this.openai.chat.completions.create({
+                            model: 'gpt-4o-mini',
+                            messages: partialMessages,
+                            max_tokens: 100, // Shorter for partial responses
+                            temperature: 0.6,
+                            stream: true
+                        });
+
+                        let partialResponse = '';
+                        for await (const chunk of partialStream) {
+                            const content = chunk.choices[0]?.delta?.content || '';
+                            if (content) {
+                                partialResponse += content;
+                                yield {
+                                    type: 'partial',
+                                    content: content,
+                                    inputUsed: accumulatedInput
+                                };
+                            }
+                        }
+
+                        lastProcessedLength = accumulatedInput.length;
+                    } catch (partialError) {
+                        console.warn('⚠️ Partial processing error, continuing...', partialError);
+                    }
+                }
+            }
+
+            // Process the complete input
+            if (accumulatedInput.trim()) {
+                console.log('🎯 Processing complete input for final response...');
+                
+                // Add final user input to conversation history
+                this.conversationHistory.push({ role: 'user', content: accumulatedInput.trim() });
+
+                const finalMessages = [
+                    { role: 'system' as const, content: this.systemPrompt },
+                    ...this.conversationHistory
+                ];
+
+                const finalStream = await this.openai.chat.completions.create({
+                    model: 'gpt-4o-mini',
+                    messages: finalMessages,
+                    max_tokens: 500,
+                    temperature: 0.7,
+                    presence_penalty: 0.1,
+                    frequency_penalty: 0.1,
+                    stream: true
+                });
+
+                let finalResponse = '';
+                for await (const chunk of finalStream) {
+                    const content = chunk.choices[0]?.delta?.content || '';
+                    if (content) {
+                        finalResponse += content;
+                        yield {
+                            type: 'complete',
+                            content: content,
+                            inputUsed: accumulatedInput.trim()
+                        };
+                    }
+                }
+
+                // Add complete response to conversation history
+                if (finalResponse) {
+                    this.conversationHistory.push({ role: 'assistant', content: finalResponse });
+                    
+                    // Keep conversation history manageable
+                    if (this.conversationHistory.length > 20) {
+                        this.conversationHistory = this.conversationHistory.slice(-20);
+                    }
+                }
+            }
+
+            console.log('✅ Completed incremental streaming response processing');
+        } catch (error) {
+            console.error('❌ Error in incremental streaming response:', error);
+            if (error instanceof Error) {
+                throw new Error(`Incremental streaming chat error: ${error.message}`);
+            }
+            throw new Error('Failed to process incremental streaming chat');
         }
     }
 }

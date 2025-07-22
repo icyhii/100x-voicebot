@@ -8,6 +8,9 @@ export function setChatRoutes(app: Router) {
     // Main chat endpoint
     app.post('/chat', chatController.handleChat.bind(chatController));
     
+    // Streaming chat endpoint
+    app.post('/chat/stream', chatController.handleStreamingChat.bind(chatController));
+    
     // Status endpoint to check if the bot is online
     app.get('/status', chatController.getStatus.bind(chatController));
     

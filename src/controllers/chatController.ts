@@ -47,6 +47,49 @@ export class ChatController {
         }
     }
 
+    public async handleStreamingChat(req: Request, res: Response): Promise<void> {
+        try {
+            const { input, isFirstMessage = false } = req.body;
+
+            // Validate input
+            if (!input || typeof input !== 'string') {
+                res.status(400).json({ error: 'Input is required and must be a string.' });
+                return;
+            }
+
+            // Set headers for Server-Sent Events
+            res.writeHead(200, {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Cache-Control'
+            });
+
+            try {
+                const streamGenerator = this.openAIService.fetchStreamingResponse(input, isFirstMessage);
+                
+                for await (const chunk of streamGenerator) {
+                    res.write(`data: ${JSON.stringify({ chunk, timestamp: new Date().toISOString() })}\n\n`);
+                }
+                
+                res.write(`data: ${JSON.stringify({ done: true, timestamp: new Date().toISOString() })}\n\n`);
+                res.end();
+            } catch (streamError) {
+                console.error('Streaming error:', streamError);
+                res.write(`data: ${JSON.stringify({ error: 'Streaming failed', timestamp: new Date().toISOString() })}\n\n`);
+                res.end();
+            }
+        } catch (error) {
+            console.error('Streaming chat controller error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            res.status(500).json({ 
+                error: 'An error occurred while processing your streaming request.',
+                details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+            });
+        }
+    }
+
     public async getStatus(req: Request, res: Response): Promise<void> {
         try {
             res.status(200).json({

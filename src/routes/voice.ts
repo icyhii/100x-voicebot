@@ -4,12 +4,15 @@ import { VoiceController } from '../controllers/voiceController';
 const voiceController = new VoiceController();
 
 export function setVoiceRoutes(app: Router) {
-    // Voice input endpoint (speech-to-text + AI response)
+    // Smart voice input endpoint (parallel with traditional fallback)
     app.post('/voice', voiceController.uploadMiddleware, voiceController.handleVoiceInput.bind(voiceController));
+    
+    // Explicit traditional voice processing endpoint
+    app.post('/voice/traditional', voiceController.uploadMiddleware, voiceController.handleTraditionalVoiceProcessing.bind(voiceController));
     
     // Text-to-speech endpoint
     app.post('/tts', voiceController.handleTextToSpeech.bind(voiceController));
     
-    // Voice capabilities endpoint
+    // Enhanced voice capabilities endpoint
     app.get('/voice/options', voiceController.getVoiceOptions.bind(voiceController));
 }
